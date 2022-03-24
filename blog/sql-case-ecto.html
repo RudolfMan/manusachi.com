@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="OQEVAkF_JT0BEgM8FEcWED0nJTUBCWAiQ4rS-7BWbH3XGrawIjfpBm9V" name="csrf-token">
+<title>SQL CASE clause with Ecto</title>
+    <meta property="og:title" content="SQL CASE clause with Ecto">
+
+    <meta property="og:description" content="We will explore the ways to send `SQL CASE` conditional expression to Postgres using Ecto. Also we will touch elixir macros and get familiar with `unquote_splicing/1`.">
+
+    <link phx-track-static rel="stylesheet" href="/assets/app-aea2a642c1e90f5d16ceb7631416672e.css?vsn=d">
+    <script defer data-domain="manusachi.com" src="https://plausible.io/js/plausible.js"></script>
+  </head>
+  <body>
+    <div class="min-h-screen bg-gray-50">
+      <div class="mx-auto max-w-screen-md">
+<main class="pt-10">
+<div id="post-sql-case-ecto" class="relative mb-10 last:mb-0 px-6 pt-10 pb-8 bg-white col-start-2 col-end-6 ring-1 ring-gray-500/5 sm:rounded-lg sm:px-10">
+  <div class="text-base text-gray-600">
+    <h2 class="text-gray-900 text-3xl font-semibold">
+      
+SQL CASE clause with Ecto
+  
+    </h2>
+
+    <div class="mt-4 mb-2">
+      <p class="italic text-gray-500 text-sm mt-10">March 11, 2022</p>
+
+  <div class="post"><p>
+<strong>TL;DR</strong> jump straight to the implementation of specialized variant of <a href="#sql_case/2"><code class="inline">sql_case/2</code> macro</a>.</p>
+<p>
+<a href="https://hexdocs.pm/ecto/Ecto.html"><code class="inline">Ecto</code></a> is one of the best things happened to elixir. It provides us with tools for language integrated query and if a query is not possible to represent using standard Ecto’s syntax, there is <a href="https://hexdocs.pm/ecto/Ecto.Query.API.html#fragment/1"><code class="inline">Ecto.Query.fragment/1</code></a> to send the expression to the DB.</p>
+<p>
+<code class="inline">SQL CASE</code> is one of those expressions that’s not available by default in Ecto so let’s see how we could implement it:</p>
+<p>
+The basic SQL syntax looks like:</p>
+<pre><code class="sql">CASE WHEN condition THEN result
+     [WHEN ...]
+     [ELSE result]
+END</code></pre>
+<p>
+Suppose the simple scenario. We have a table <code class="inline">movies</code> and, say, we would like to query the titles and types of movies based on the length requirements set by American Film Institute and British Film Institute.</p>
+<pre><code class="table"> title         | length
+---------------+--------
+ The Big Shave |      6
+ Goodfellas    |    146</code></pre>
+<p>
+According to those organizations, motion pictures with running time less than 40 minutes are considered short films otherwise it can be considered as feature-length film.</p>
+<pre><code class="sql">SELECT title,
+       CASE WHEN length &gt; 40 THEN &#39;feature film&#39;
+            ELSE &#39;short film&#39;
+       END
+    FROM movies;</code></pre>
+<p>
+With <code class="inline">Ecto.Query.fragment</code> formatted with <code class="inline">mix format</code> elixir code could look like:</p>
+<pre><code class="makeup elixir"><span class="kn">import</span><span class="w"> </span><span class="nc">Ecto.Query</span><span class="w">
+
+</span><span class="n">from</span><span class="p" data-group-id="3367499743-1">(</span><span class="n">m</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="s">&quot;movies&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">select</span><span class="p">:</span><span class="w">
+    </span><span class="p" data-group-id="3367499743-2">{</span><span class="n">m</span><span class="o">.</span><span class="n">title</span><span class="p">,</span><span class="w">
+     </span><span class="n">fragment</span><span class="p" data-group-id="3367499743-3">(</span><span class="w">
+       </span><span class="s">&quot;&quot;&quot;
+       CASE WHEN ? &gt; 40 THEN &#39;feature film&#39;
+            ELSE &#39;short film&#39;
+       END
+       &quot;&quot;&quot;</span><span class="p">,</span><span class="w">
+       </span><span class="n">m</span><span class="o">.</span><span class="n">length</span><span class="w">
+     </span><span class="p" data-group-id="3367499743-3">)</span><span class="p" data-group-id="3367499743-2">}</span><span class="w">
+</span><span class="p" data-group-id="3367499743-1">)</span></code></pre>
+<p>
+Pretty straight forward, isn’t it?</p>
+<p>
+However, later we learn that the Screen Actors Guild has a different requirement. Instead of 40 minutes, they require the film to be at least 60 minutes long.</p>
+<p>
+To be able to satisfy all those organizations we can make the query a little bit more dynamic. Both conditional expression and values could also be bound on fragment building, as:</p>
+<pre><code class="makeup elixir"><span class="n">required_length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">60</span><span class="w">
+
+</span><span class="n">fragment</span><span class="p" data-group-id="7593533652-1">(</span><span class="w">
+  </span><span class="s">&quot;&quot;&quot;
+  CASE WHEN ? THEN ?
+       ELSE ?
+  END
+  &quot;&quot;&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="n">m</span><span class="o">.</span><span class="n">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="o">^</span><span class="n">required_length</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;feature film&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="s">&quot;short film&quot;</span><span class="w">
+</span><span class="p" data-group-id="7593533652-1">)</span></code></pre>
+<p>
+Nice! Thought it could be even nicer!</p>
+<h3>
+Macros</h3>
+<p>
+As described in the docs for <a href="https://hexdocs.pm/ecto/Ecto.Query.API.html#fragment/1-defining-custom-functions-using-macros-and-fragment"><code class="inline">fragment/1</code></a> we can define a custom function using macros!</p>
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">CustomFunctions</span><span class="w"> </span><span class="k" data-group-id="3026504464-1">do</span><span class="w">
+  </span><span class="kd">defmacro</span><span class="w"> </span><span class="nf">case_when</span><span class="p" data-group-id="3026504464-2">(</span><span class="n">condition</span><span class="p">,</span><span class="w"> </span><span class="n">then</span><span class="p">,</span><span class="w"> </span><span class="n">otherwise</span><span class="p" data-group-id="3026504464-2">)</span><span class="w"> </span><span class="k" data-group-id="3026504464-3">do</span><span class="w">
+    </span><span class="k">quote</span><span class="w"> </span><span class="k" data-group-id="3026504464-4">do</span><span class="w">
+      </span><span class="n">fragment</span><span class="p" data-group-id="3026504464-5">(</span><span class="w">
+        </span><span class="s">&quot;&quot;&quot;
+        CASE WHEN ? THEN ?
+             ELSE ?
+        END
+        &quot;&quot;&quot;</span><span class="p">,</span><span class="w">
+        </span><span class="k">unquote</span><span class="p" data-group-id="3026504464-6">(</span><span class="n">then</span><span class="p" data-group-id="3026504464-6">)</span><span class="p">,</span><span class="w">
+        </span><span class="k">unquote</span><span class="p" data-group-id="3026504464-7">(</span><span class="n">otherwise</span><span class="p" data-group-id="3026504464-7">)</span><span class="w">
+      </span><span class="p" data-group-id="3026504464-5">)</span><span class="w">
+    </span><span class="k" data-group-id="3026504464-4">end</span><span class="w">
+  </span><span class="k" data-group-id="3026504464-3">end</span><span class="w">
+</span><span class="k" data-group-id="3026504464-1">end</span></code></pre>
+<p>
+And could be used as:</p>
+<pre><code class="makeup elixir"><span class="kn">import</span><span class="w"> </span><span class="nc">Ecto.Query</span><span class="w">
+</span><span class="kn">import</span><span class="w"> </span><span class="nc">CustomFunctions</span><span class="w">
+
+</span><span class="n">from</span><span class="p" data-group-id="4094662533-1">(</span><span class="n">m</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="s">&quot;movies&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">select</span><span class="p">:</span><span class="w">
+    </span><span class="p" data-group-id="4094662533-2">{</span><span class="n">m</span><span class="o">.</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">case_when</span><span class="p" data-group-id="4094662533-3">(</span><span class="n">m</span><span class="o">.</span><span class="n">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;feature film&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;short film&quot;</span><span class="p" data-group-id="4094662533-3">)</span><span class="p" data-group-id="4094662533-2">}</span><span class="w">
+</span><span class="p" data-group-id="4094662533-1">)</span></code></pre>
+<blockquote>
+  <h4 class="note">
+Note  </h4>
+  <p>
+I’m not encouraging to prefer macros whenever possible. Overall <strong>in elixir macros should only be used as a last resort.</strong>  </p>
+  <p>
+Custom functions for Ecto is one of the exceptional cases when I think macros are more acceptable.  </p>
+</blockquote>
+<p>
+Now, let’s say, for each film we also have the rating symbol according to Motion Picture Association, but we want to print out the name of the rating rather than a symbol.</p>
+<pre><code class="table"> title                       | rating
+-----------------------------+--------
+ The Hunchback of Notre Dame |      G
+ Coraline                    |     PG
+ Black Swan                  |      R
+ Pulp Fiction                |  NC-17</code></pre>
+<p>
+In SQL it would be something like:</p>
+<pre><code class="sql">SELECT title,
+       CASE WHEN rating == &#39;G&#39; THEN &#39;General Audiences&#39;
+            WHEN rating == &#39;R&#39; THEN &#39;Restricted&#39;
+            ...
+       END
+    FROM movies;</code></pre>
+<p>
+The idea for our custom function is to generate the “template” sql expression with <code class="inline">?</code> in places where values would be bound. Bounded values could belong to either “<code class="inline">WHEN</code>-condition”, “<code class="inline">THEN</code>-result” or “<code class="inline">ELSE</code>-result”</p>
+<p>
+Keywords seem to be a perfect fit for such exercise.</p>
+<p>
+Suppose a function:</p>
+<pre><code class="makeup elixir"><span class="n">sql_case</span><span class="p" data-group-id="3019852521-1">(</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;R&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Restricted&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">else</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General Audience&quot;</span><span class="p" data-group-id="3019852521-1">)</span></code></pre>
+<p>
+and the list can go on and on</p>
+<pre><code class="makeup elixir"><span class="n">sql_case</span><span class="p" data-group-id="5603542676-1">(</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;R&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Restricted&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;G&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General Audience&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;PG&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Parental Guidance Suggested&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;NC-17&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Clearly Adult&quot;</span><span class="w">
+</span><span class="p" data-group-id="5603542676-1">)</span></code></pre>
+<p>
+We could take keys and iterate over the list to build a template like:</p>
+<pre><code class="makeup elixir"><span class="n">template</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="n">params</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Keyword</span><span class="o">.</span><span class="n">keys</span><span class="p" data-group-id="9190950448-1">(</span><span class="p" data-group-id="9190950448-1">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">reduce</span><span class="p" data-group-id="9190950448-2">(</span><span class="s">&quot;CASE &quot;</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="9190950448-3">fn</span><span class="w">
+    </span><span class="ss">:when</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;WHEN ? &quot;</span><span class="w">
+    </span><span class="ss">:then</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;THEN ? &quot;</span><span class="w">
+    </span><span class="ss">:else</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;ELSE ? &quot;</span><span class="w">
+  </span><span class="k" data-group-id="9190950448-3">end</span><span class="p" data-group-id="9190950448-2">)</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;END&quot;</span></code></pre>
+<p>
+That would build a “template” string of the query for the fragment to “<code class="inline">unquote</code>“:</p>
+<pre><code class="makeup elixir"><span class="s">&quot;CASE WHEN ? THEN ? WHEN ? THEN ? ... ELSE ? END&quot;</span></code></pre>
+<p>
+And the arguments to bind would be the list of values</p>
+<pre><code class="makeup elixir"><span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Keyword</span><span class="o">.</span><span class="n">values</span><span class="p" data-group-id="4326756996-1">(</span><span class="n">params</span><span class="p" data-group-id="4326756996-1">)</span></code></pre>
+<p>
+The signature for fragment is</p>
+<pre><code class="makeup elixir"><span class="n">fragment</span><span class="p" data-group-id="1932994218-1">(</span><span class="n">template</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1932994218-2">[</span><span class="n">arg1</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1932994218-3">[</span><span class="n">arg2</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1932994218-4">[</span><span class="n">arg3</span><span class="p">,</span><span class="w"> </span><span class="o">..</span><span class="p" data-group-id="1932994218-4">]</span><span class="p" data-group-id="1932994218-3">]</span><span class="p" data-group-id="1932994218-2">]</span><span class="p" data-group-id="1932994218-1">)</span></code></pre>
+<p>
+So at compile time we need to know the number of arguments to bind. Luckily special form <a href="https://hexdocs.pm/elixir/Kernel.SpecialForms.html#unquote_splicing/1"><code class="inline">unquote_splicing/1</code></a> can help us to achieve that:</p>
+<pre><code class="makeup elixir"><span class="k">quote</span><span class="w"> </span><span class="k" data-group-id="4884911619-1">do</span><span class="w">
+  </span><span class="n">fragment</span><span class="p" data-group-id="4884911619-2">(</span><span class="k">unquote</span><span class="p" data-group-id="4884911619-3">(</span><span class="n">template</span><span class="p" data-group-id="4884911619-3">)</span><span class="p">,</span><span class="w"> </span><span class="k">unquote_splicing</span><span class="p" data-group-id="4884911619-4">(</span><span class="n">args</span><span class="p" data-group-id="4884911619-4">)</span><span class="p" data-group-id="4884911619-2">)</span><span class="w">
+</span><span class="k" data-group-id="4884911619-1">end</span></code></pre>
+<p>
+The resulting macro would look like:</p>
+<pre><code class="makeup elixir"><span class="kd">defmacro</span><span class="w"> </span><span class="nf">sql_case</span><span class="p" data-group-id="9360134265-1">(</span><span class="n">params</span><span class="p" data-group-id="9360134265-1">)</span><span class="w"> </span><span class="k" data-group-id="9360134265-2">do</span><span class="w">
+  </span><span class="n">template</span><span class="w"> </span><span class="o">=</span><span class="w">
+    </span><span class="n">params</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Keyword</span><span class="o">.</span><span class="n">keys</span><span class="p" data-group-id="9360134265-3">(</span><span class="p" data-group-id="9360134265-3">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">reduce</span><span class="p" data-group-id="9360134265-4">(</span><span class="s">&quot;CASE &quot;</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="9360134265-5">fn</span><span class="w">
+      </span><span class="ss">:when</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;WHEN ? &quot;</span><span class="w">
+      </span><span class="ss">:then</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;THEN ? &quot;</span><span class="w">
+      </span><span class="ss">:else</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;ELSE ? &quot;</span><span class="w">
+    </span><span class="k" data-group-id="9360134265-5">end</span><span class="p" data-group-id="9360134265-4">)</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;END&quot;</span><span class="w">
+
+  </span><span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Keyword</span><span class="o">.</span><span class="n">values</span><span class="p" data-group-id="9360134265-6">(</span><span class="n">params</span><span class="p" data-group-id="9360134265-6">)</span><span class="w">
+
+  </span><span class="k">quote</span><span class="w"> </span><span class="k" data-group-id="9360134265-7">do</span><span class="w">
+    </span><span class="n">fragment</span><span class="p" data-group-id="9360134265-8">(</span><span class="k">unquote</span><span class="p" data-group-id="9360134265-9">(</span><span class="n">template</span><span class="p" data-group-id="9360134265-9">)</span><span class="p">,</span><span class="w"> </span><span class="k">unquote_splicing</span><span class="p" data-group-id="9360134265-10">(</span><span class="n">args</span><span class="p" data-group-id="9360134265-10">)</span><span class="p" data-group-id="9360134265-8">)</span><span class="w">
+  </span><span class="k" data-group-id="9360134265-7">end</span><span class="w">
+</span><span class="k" data-group-id="9360134265-2">end</span></code></pre>
+<p>
+And we could use it as:</p>
+<pre><code class="makeup elixir"><span class="n">sql_case</span><span class="p" data-group-id="0801822991-1">(</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;R&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Restricted&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;G&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General Audience&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;PG&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Parental Guidance Suggested&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;NC-17&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Clearly Adult&quot;</span><span class="p">,</span><span class="w">
+</span><span class="p" data-group-id="0801822991-1">)</span></code></pre>
+<p>
+<em>Notice how that <code class="inline">SQL CASE</code> expression looks like <code class="inline">cond do</code> in elixir.</em>  Each conditional expression is just comparing <code class="inline">rating</code> with the symbol. In <code class="inline">SQL</code> for these types of a situation there is a specialized variant of the general form:</p>
+<pre><code class="sql">CASE expression
+    WHEN value THEN result
+    [WHEN ...]
+    [ELSE result]
+END</code></pre>
+<p>
+It’s more like elixir’s <code class="inline">case do</code>.
+With that variant our query could look like:</p>
+<pre><code class="sql">CASE rating
+  WHEN &#39;G&#39; THEN &#39;General Audiences&#39;
+  WHEN &#39;R&#39; THEN &#39;Restricted&#39;
+    ...
+END</code></pre>
+<p>
+We could have the same: as</p>
+<pre><code class="makeup elixir"><span class="c1">#                 ↓↓↓↓↓</span><span class="w">
+</span><span class="kd">defmacro</span><span class="w"> </span><span class="nf">sql_case</span><span class="p" data-group-id="2326627239-1">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">params</span><span class="p" data-group-id="2326627239-1">)</span><span class="w"> </span><span class="k" data-group-id="2326627239-2">do</span><span class="w">
+  </span><span class="n">template</span><span class="w"> </span><span class="o">=</span><span class="w">            </span><span class="c1">#     ↓↓</span><span class="w">
+    </span><span class="nc">Enum</span><span class="o">.</span><span class="n">reduce</span><span class="p" data-group-id="2326627239-3">(</span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CASE ? &quot;</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="2326627239-4">fn</span><span class="w">
+      </span><span class="ss">:when</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;WHEN ? &quot;</span><span class="w">
+      </span><span class="ss">:then</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;THEN ? &quot;</span><span class="w">
+      </span><span class="ss">:else</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;ELSE ? &quot;</span><span class="w">
+    </span><span class="k" data-group-id="2326627239-4">end</span><span class="p" data-group-id="2326627239-3">)</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;END&quot;</span><span class="w">
+
+  </span><span class="c1">#       ↓↓↓↓ </span><span class="w">
+  </span><span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2326627239-5">[</span><span class="n">value</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nc">Keyword</span><span class="o">.</span><span class="n">values</span><span class="p" data-group-id="2326627239-6">(</span><span class="n">params</span><span class="p" data-group-id="2326627239-6">)</span><span class="p" data-group-id="2326627239-5">]</span><span class="w">
+
+  </span><span class="k">quote</span><span class="w"> </span><span class="k" data-group-id="2326627239-7">do</span><span class="w">
+    </span><span class="n">fragment</span><span class="p" data-group-id="2326627239-8">(</span><span class="k">unquote</span><span class="p" data-group-id="2326627239-9">(</span><span class="n">template</span><span class="p" data-group-id="2326627239-9">)</span><span class="p">,</span><span class="w"> </span><span class="k">unquote_splicing</span><span class="p" data-group-id="2326627239-10">(</span><span class="n">args</span><span class="p" data-group-id="2326627239-10">)</span><span class="p" data-group-id="2326627239-8">)</span><span class="w">
+  </span><span class="k" data-group-id="2326627239-7">end</span><span class="w">
+</span><span class="k" data-group-id="2326627239-2">end</span><span class="w">
+
+</span><span class="c1"># use</span><span class="w">
+</span><span class="n">sql_case</span><span class="p" data-group-id="2326627239-11">(</span><span class="n">rating</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;R&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Restricted&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;G&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General Audience&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;PG&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Parental Guidance Suggested&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;NC-17&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Clearly Adult&quot;</span><span class="p">,</span><span class="w">
+</span><span class="p" data-group-id="2326627239-11">)</span></code></pre>
+<h3>
+Formatting</h3>
+<p>
+Once we run <code class="inline">mix format</code> - it quickly transforms the code into:</p>
+<pre><code class="makeup elixir"><span class="n">sql_case</span><span class="p" data-group-id="4270402796-1">(</span><span class="n">rating</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;R&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Restricted&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;G&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General Audience&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;PG&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Parental Guidance Suggested&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;NC-17&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Clearly Adult&quot;</span><span class="p">,</span><span class="w">
+</span><span class="p" data-group-id="4270402796-1">)</span></code></pre>
+<p>
+Which is less readable than I wanted. However, if we had pairs of <code class="inline">when-then</code> wrapped into tuples or lists formatter would have left them on the same line:</p>
+<pre><code class="makeup elixir"><span class="n">sql_case</span><span class="p" data-group-id="1765841314-1">(</span><span class="n">m</span><span class="o">.</span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1765841314-2">[</span><span class="w">
+  </span><span class="p" data-group-id="1765841314-3">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;G&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General Audiences&quot;</span><span class="p" data-group-id="1765841314-3">]</span><span class="p">,</span><span class="w">
+  </span><span class="p" data-group-id="1765841314-4">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;R&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Restricted&quot;</span><span class="p" data-group-id="1765841314-4">]</span><span class="p">,</span><span class="w">
+  </span><span class="p" data-group-id="1765841314-5">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;PG&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Parental Guidance Suggested&quot;</span><span class="p" data-group-id="1765841314-5">]</span><span class="p">,</span><span class="w">
+  </span><span class="p" data-group-id="1765841314-6">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;NC-17&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Clearly Adult&quot;</span><span class="p" data-group-id="1765841314-6">]</span><span class="w">
+</span><span class="p" data-group-id="1765841314-2">]</span><span class="p" data-group-id="1765841314-1">)</span></code></pre>
+<p>
+While we could flatten this list before building the template sql query string, reducing over this type of a list could provide us with some “validation” that every <code class="inline">:when</code> is followed by <code class="inline">:then</code>. Otherwise, it will not compile!</p>
+<pre><code class="makeup elixir"><span class="n">template</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="nc">Enum</span><span class="o">.</span><span class="n">reduce</span><span class="p" data-group-id="2112496558-1">(</span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CASE ? &quot;</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="2112496558-2">fn</span><span class="w">
+    </span><span class="p" data-group-id="2112496558-3">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="c">_condition</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="c">_result</span><span class="p" data-group-id="2112496558-3">]</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;WHEN ? THEN ? &quot;</span><span class="w">
+    </span><span class="p" data-group-id="2112496558-4">[</span><span class="ss">else</span><span class="p">:</span><span class="w"> </span><span class="c">_result</span><span class="p" data-group-id="2112496558-4">]</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;ELSE ? &quot;</span><span class="w">
+  </span><span class="k" data-group-id="2112496558-2">end</span><span class="p" data-group-id="2112496558-1">)</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;END&quot;</span></code></pre>
+<p>
+And for arguments we could use a comprehension to extract nested values:</p>
+<pre><code class="makeup elixir"><span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">pair</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2125672542-1">{</span><span class="bp">_</span><span class="p">,</span><span class="w"> </span><span class="n">arg</span><span class="p" data-group-id="2125672542-1">}</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pair</span><span class="p">,</span><span class="w"> </span><span class="ss">do</span><span class="p">:</span><span class="w"> </span><span class="n">arg</span><span class="w">
+</span><span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2125672542-2">[</span><span class="n">value</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">args</span><span class="p" data-group-id="2125672542-2">]</span></code></pre>
+<span id="sql_case/2">
+</span>
+<p>
+and this will give us the macro:</p>
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">CustomFunctions</span><span class="w"> </span><span class="k" data-group-id="7860277205-1">do</span><span class="w">
+  </span><span class="kd">defmacro</span><span class="w"> </span><span class="nf">sql_case</span><span class="p" data-group-id="7860277205-2">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">params</span><span class="p" data-group-id="7860277205-2">)</span><span class="w"> </span><span class="k" data-group-id="7860277205-3">do</span><span class="w">
+    </span><span class="n">template</span><span class="w"> </span><span class="o">=</span><span class="w">
+      </span><span class="nc">Enum</span><span class="o">.</span><span class="n">reduce</span><span class="p" data-group-id="7860277205-4">(</span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CASE ? &quot;</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="7860277205-5">fn</span><span class="w">
+        </span><span class="p" data-group-id="7860277205-6">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="c">_condition</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="c">_result</span><span class="p" data-group-id="7860277205-6">]</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;WHEN ? THEN ? &quot;</span><span class="w">
+        </span><span class="p" data-group-id="7860277205-7">[</span><span class="ss">else</span><span class="p">:</span><span class="w"> </span><span class="c">_result</span><span class="p" data-group-id="7860277205-7">]</span><span class="p">,</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;ELSE ? &quot;</span><span class="w">
+      </span><span class="k" data-group-id="7860277205-5">end</span><span class="p" data-group-id="7860277205-4">)</span><span class="w"> </span><span class="o">&lt;&gt;</span><span class="w"> </span><span class="s">&quot;END&quot;</span><span class="w">
+
+    </span><span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">pair</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7860277205-8">{</span><span class="bp">_</span><span class="p">,</span><span class="w"> </span><span class="n">arg</span><span class="p" data-group-id="7860277205-8">}</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pair</span><span class="p">,</span><span class="w"> </span><span class="ss">do</span><span class="p">:</span><span class="w"> </span><span class="n">arg</span><span class="w">
+    </span><span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="7860277205-9">[</span><span class="n">value</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">args</span><span class="p" data-group-id="7860277205-9">]</span><span class="w">
+
+    </span><span class="k">quote</span><span class="w"> </span><span class="k" data-group-id="7860277205-10">do</span><span class="w">
+      </span><span class="n">fragment</span><span class="p" data-group-id="7860277205-11">(</span><span class="k">unquote</span><span class="p" data-group-id="7860277205-12">(</span><span class="n">template</span><span class="p" data-group-id="7860277205-12">)</span><span class="p">,</span><span class="w"> </span><span class="k">unquote_splicing</span><span class="p" data-group-id="7860277205-13">(</span><span class="n">args</span><span class="p" data-group-id="7860277205-13">)</span><span class="p" data-group-id="7860277205-11">)</span><span class="w">
+    </span><span class="k" data-group-id="7860277205-10">end</span><span class="w">
+  </span><span class="k" data-group-id="7860277205-3">end</span><span class="w">
+</span><span class="k" data-group-id="7860277205-1">end</span></code></pre>
+<p>
+That could be used as:</p>
+<pre><code class="makeup elixir"><span class="kn">import</span><span class="w"> </span><span class="nc">Ecto.Query</span><span class="w">
+</span><span class="kn">import</span><span class="w"> </span><span class="nc">CustomFunctions</span><span class="w">
+
+</span><span class="n">from</span><span class="p" data-group-id="4484876625-1">(</span><span class="n">m</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="s">&quot;movies&quot;</span><span class="p">,</span><span class="w">
+  </span><span class="ss">select</span><span class="p">:</span><span class="w">
+    </span><span class="p" data-group-id="4484876625-2">{</span><span class="n">m</span><span class="o">.</span><span class="n">title</span><span class="p">,</span><span class="w">
+     </span><span class="n">sql_case</span><span class="p" data-group-id="4484876625-3">(</span><span class="n">m</span><span class="o">.</span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4484876625-4">[</span><span class="w">
+       </span><span class="p" data-group-id="4484876625-5">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;G&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General Audiences&quot;</span><span class="p" data-group-id="4484876625-5">]</span><span class="p">,</span><span class="w">
+       </span><span class="p" data-group-id="4484876625-6">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;R&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Restricted&quot;</span><span class="p" data-group-id="4484876625-6">]</span><span class="p">,</span><span class="w">
+       </span><span class="p" data-group-id="4484876625-7">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;PG&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Parental Guidance Suggested&quot;</span><span class="p" data-group-id="4484876625-7">]</span><span class="p">,</span><span class="w">
+       </span><span class="p" data-group-id="4484876625-8">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;NC-17&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Clearly Adult&quot;</span><span class="p" data-group-id="4484876625-8">]</span><span class="p">,</span><span class="w">
+       </span><span class="p" data-group-id="4484876625-9">[</span><span class="ss">else</span><span class="p">:</span><span class="w"> </span><span class="n">m</span><span class="o">.</span><span class="n">rating</span><span class="p" data-group-id="4484876625-9">]</span><span class="w">
+     </span><span class="p" data-group-id="4484876625-4">]</span><span class="p" data-group-id="4484876625-3">)</span><span class="p" data-group-id="4484876625-2">}</span></code></pre>
+<p>
+Awesome! Now this macro can also be used in combination with other functions and macros from Ecto DSL, for example with <code class="inline">update:</code></p>
+<pre><code class="makeup elixir"><span class="w">  </span><span class="n">from</span><span class="p" data-group-id="0012568186-1">(</span><span class="n">m</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="s">&quot;movies&quot;</span><span class="p">,</span><span class="w">
+    </span><span class="ss">update</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0012568186-2">[</span><span class="w">
+      </span><span class="ss">set</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0012568186-3">[</span><span class="w">
+        </span><span class="ss">rating_descritpion</span><span class="p">:</span><span class="w">
+          </span><span class="n">sql_case</span><span class="p" data-group-id="0012568186-4">(</span><span class="n">m</span><span class="o">.</span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0012568186-5">[</span><span class="w">
+            </span><span class="p" data-group-id="0012568186-6">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;G&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General Audiences&quot;</span><span class="p" data-group-id="0012568186-6">]</span><span class="p">,</span><span class="w">
+            </span><span class="p" data-group-id="0012568186-7">[</span><span class="ss">when</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;R&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">then</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Restricted&quot;</span><span class="p" data-group-id="0012568186-7">]</span><span class="p">,</span><span class="w">
+            </span><span class="n">...</span><span class="w">
+          </span><span class="p" data-group-id="0012568186-5">]</span><span class="p" data-group-id="0012568186-4">)</span><span class="w">
+      </span><span class="p" data-group-id="0012568186-3">]</span><span class="w">
+    </span><span class="p" data-group-id="0012568186-2">]</span><span class="w">
+  </span><span class="p" data-group-id="0012568186-1">)</span></code></pre>
+<hr class="thin" />
+<p>
+For more ideas and inspiration also check out this amazing blog post <a href="https://supersimple.org/blog/all-things">“I can do all things through PostgreSQL”</a> by <a href="https://twitter.com/sprsmpl">Todd Resudek</a> <em>(if you haven’t yet)</em>.</p>
+</div>
+
+  <hr>
+    <div class="mt-10 mb-5">
+    Thanks
+
+<a class="underline" href="https://github.com/davydog187" target="_blank">@davydog187</a>
+
+    for the help to make this article better.
+    </div>
+
+  <p class="text-gray-500 italic">
+    See a mistake, or would like to propose an improvement? Please, open a PR to edit the article on <a class="underline" href="https://github.com/RudolfMan/blog_posts/blob/master/2022/03-11-sql-case-ecto.md">Github</a>
+  </p>
+    </div>
+  </div>
+
+  <div class="text-base leading-7 font-semibold">
+    <p class="text-fuchsia-500 hover:text-fuchsia-600">
+      
+<a data-phx-link="redirect" data-phx-link-state="push" href="/blog">Back</a>
+  
+    </p>
+  </div>
+</div>
+</main>
+<footer class="py-10">
+  <div id="ok" class="relative mb-10 last:mb-0 px-6 pt-10 pb-8 bg-white col-start-2 col-end-6 ring-1 ring-gray-500/5 sm:rounded-lg sm:px-10">
+  <div class="text-base text-gray-600">
+    <h2 class="text-gray-900 text-3xl font-semibold">
+      
+    </h2>
+
+    <div class="mt-4 mb-2">
+      
+    <div class="flex">
+      <div class="mb-2">
+        <img src="/images/rudolf_manusachi-3bb82e361f9624566a0b775c25b45338.jpeg?vsn=d" class="rounded-full w-24 flex items-center justify-center">
+      </div>
+      <div class="flex flex-col">
+        <div class="px-6">
+          <h1 class="text-3xl">Rudolf Manusadzhian</h1>
+          <p class="italic">Developing software at
+            <a href="https://simplebet.io" class="text-fuchsia-600" target="_blank">Simplebet</a>
+          </p>
+        </div>
+        <div class="mt-3 flex place-content-around">
+          <div class="w-6">
+            <a href="https://github.com/RudolfMan" target="_blank">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Pro 6.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"></path></svg>
+            </a>
+          </div>
+
+          <div class="w-6">
+            <a href="https://twitter.com/RudManusachi" target="_blank">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Pro 6.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M400 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48zm-48.9 158.8c.2 2.8.2 5.7.2 8.5 0 86.7-66 186.6-186.6 186.6-37.2 0-71.7-10.8-100.7-29.4 5.3.6 10.4.8 15.8.8 30.7 0 58.9-10.4 81.4-28-28.8-.6-53-19.5-61.3-45.5 10.1 1.5 19.2 1.5 29.6-1.2-30-6.1-52.5-32.5-52.5-64.4v-.8c8.7 4.9 18.9 7.9 29.6 8.3a65.447 65.447 0 0 1-29.2-54.6c0-12.2 3.2-23.4 8.9-33.1 32.3 39.8 80.8 65.8 135.2 68.6-9.3-44.5 24-80.6 64-80.6 18.9 0 35.9 7.9 47.9 20.7 14.8-2.8 29-8.3 41.6-15.8-4.9 15.2-15.2 28-28.8 36.1 13.2-1.4 26-5.1 37.8-10.2-8.9 13.1-20.1 24.7-32.9 34z"></path></svg>
+            </a>
+          </div>
+
+          <div class="w-6">
+            <a href="https://www.linkedin.com/in/manusachi" target="_blank">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Pro 6.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"></path></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    </div>
+  </div>
+
+  <div class="text-base leading-7 font-semibold">
+    <p class="text-fuchsia-500 hover:text-fuchsia-600">
+      
+    </p>
+  </div>
+</div>
+</footer>
+      </div>
+    </div>
+  </body>
+</html>
