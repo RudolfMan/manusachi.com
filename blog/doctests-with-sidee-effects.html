@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="I2dqCgEzGwYHLSEgEUBNIgAHPh8cABMXzWGSbcnedNiDs9uPsMqRi-zz" name="csrf-token">
+<title>Doctests with side effects</title>
+    <meta property="og:title" content="Doctests with side effects">
+
+    <meta property="og:description" content="How to write doctests for public functions that have side effects.">
+
+    <link phx-track-static rel="stylesheet" href="/assets/app-aea2a642c1e90f5d16ceb7631416672e.css?vsn=d">
+    <script defer data-domain="manusachi.com" src="https://plausible.io/js/plausible.js"></script>
+  </head>
+  <body>
+    <div class="min-h-screen bg-gray-50">
+      <div class="mx-auto max-w-screen-md">
+<main class="pt-10">
+<div id="post-doctests-with-sidee-effects" class="relative mb-10 last:mb-0 px-6 pt-10 pb-8 bg-white col-start-2 col-end-6 ring-1 ring-gray-500/5 sm:rounded-lg sm:px-10">
+  <div class="text-base text-gray-600">
+    <h2 class="text-gray-900 text-3xl font-semibold">
+      
+Doctests with side effects
+  
+    </h2>
+
+    <div class="mt-4 mb-2">
+      <p class="italic text-gray-500 text-sm mt-10">March 23, 2022</p>
+
+  <div class="post"><blockquote>
+  <p>
+<strong>TL;DR</strong> jump to the <a href="#conclusion">conclusion</a>  </p>
+</blockquote>
+<p>
+At <a href="https://simplebet.io">Simplebet</a> while we are doing our best to have the systems covered with integration and unit tests, recently, we’ve also started focusing more on “Living Documentations” mostly using <a href="https://hexdocs.pm/ex_doc/readme.html"><code class="inline">ExDoc</code></a>. Filled with mermaid charts, descriptions of the service architecture and data flows it provides a better onboarding experience.</p>
+<p>
+That drew my attention to the docs of “context” modules. Often those top-level public functions, meant to be called from controllers, live views and other parts of the application, happen to be impure. They might try to reach out to remote HTTP services, RabbitMQ, the DB or to other resources.</p>
+<p>
+In those cases, while sometimes the <code class="inline">@doc</code>s include usage examples, they intentionally lack <code class="inline">iex&gt;</code> prefixes, so <code class="inline">doctests</code> don’t pick them up and fail. However, with the code refactorings and the system evolutions we risk having the docs mismatch the reality. Although, arguably “outdated docs are still better than no docs” we don’t have to compromise!</p>
+<p>
+In this post I’ll show one way of “doctesting” functions that have side effects.</p>
+<blockquote>
+  <p>
+If you are not familiar with <code class="inline">doctest</code>s, please take a look at the official documentation of <a href="https://hexdocs.pm/ex_unit/ExUnit.DocTest.html"><code class="inline">ExUnit.DocTest</code></a> first.  </p>
+</blockquote>
+<h3>
+Closer to real world example</h3>
+<p>
+Let’s take a look at the example of interactions with an external system. In regular scenarios we tend to mock or stub those with <a href="https://hexdocs.pm/mox/Mox.html"><code class="inline">Mox</code></a>.</p>
+<blockquote>
+  <p>
+If you haven’t yet read <a href="https://dashbit.co/blog/mocks-and-explicit-contracts">“Mocks and explicit contracts”</a> by José Valim I highly encourage you to do that!  </p>
+</blockquote>
+<p>
+The documentation of <code class="inline">Mox</code> provides with an example of testing the module that displays the weather information.</p>
+<pre><code class="makeup elixir"><span class="c1"># humanized_weather.ex</span><span class="w">
+
+</span><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w"> </span><span class="k" data-group-id="9771721531-1">do</span><span class="w">
+  </span><span class="kd">def</span><span class="w"> </span><span class="nf">display_temp</span><span class="p" data-group-id="9771721531-2">(</span><span class="p" data-group-id="9771721531-3">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="9771721531-3">}</span><span class="p" data-group-id="9771721531-2">)</span><span class="w"> </span><span class="k" data-group-id="9771721531-4">do</span><span class="w">
+    </span><span class="p" data-group-id="9771721531-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">temp</span><span class="p" data-group-id="9771721531-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">temp</span><span class="p" data-group-id="9771721531-6">(</span><span class="p" data-group-id="9771721531-7">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="9771721531-7">}</span><span class="p" data-group-id="9771721531-6">)</span><span class="w">
+    </span><span class="s">&quot;Current temperature is </span><span class="si" data-group-id="9771721531-8">#{</span><span class="n">temp</span><span class="si" data-group-id="9771721531-8">}</span><span class="s"> degrees&quot;</span><span class="w">
+  </span><span class="k" data-group-id="9771721531-4">end</span><span class="w">
+
+  </span><span class="c1"># ...</span><span class="w">
+</span><span class="k" data-group-id="9771721531-1">end</span></code></pre>
+<p>
+Let’s add a <code class="inline">@doc</code> with a “doctestable” example:</p>
+<pre><code class="makeup elixir"><span class="c1"># humanized_weather.ex</span><span class="w">
+
+</span><span class="c1"># ...</span><span class="w">
+
+</span><span class="na">@doc</span><span class="w"> </span><span class="s">&quot;&quot;&quot;
+Displays current temperature at the given coordinates
+
+## Examples
+
+    iex&gt; MyApp.HumanizedWeather.display_temp({50.06, 19.94})
+    &quot;Current temperature is 30 degrees&quot;
+&quot;&quot;&quot;</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">display_temp</span><span class="p" data-group-id="8868714339-1">(</span><span class="p" data-group-id="8868714339-2">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="8868714339-2">}</span><span class="p" data-group-id="8868714339-1">)</span><span class="w"> </span><span class="k" data-group-id="8868714339-3">do</span><span class="w">
+  </span><span class="p" data-group-id="8868714339-4">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">temp</span><span class="p" data-group-id="8868714339-4">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">temp</span><span class="p" data-group-id="8868714339-5">(</span><span class="p" data-group-id="8868714339-6">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="8868714339-6">}</span><span class="p" data-group-id="8868714339-5">)</span><span class="w">
+  </span><span class="s">&quot;Current temperature is </span><span class="si" data-group-id="8868714339-7">#{</span><span class="n">temp</span><span class="si" data-group-id="8868714339-7">}</span><span class="s"> degrees&quot;</span><span class="w">
+</span><span class="k" data-group-id="8868714339-3">end</span></code></pre>
+<p>
+Now let’s add the <code class="inline">doctest</code>:</p>
+<pre><code class="makeup elixir"><span class="c1"># humanized_weather_test.exs</span><span class="w">
+
+</span><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="7635943791-1">do</span><span class="w">
+  </span><span class="kn">use</span><span class="w"> </span><span class="nc">ExUnit.Case</span><span class="p">,</span><span class="w"> </span><span class="ss">async</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
+
+  </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w">
+</span><span class="k" data-group-id="7635943791-1">end</span></code></pre>
+<p>
+Essentially <code class="inline">doctest</code> macro extracts examples from <code class="inline">@moduledoc</code> and <code class="inline">@doc</code> attributes into separate tests. What we want here is to “setup” some expectations for <code class="inline">MyApp.MockWeatherAPI</code>:</p>
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="0811571639-1">do</span><span class="w">
+  </span><span class="kn">use</span><span class="w"> </span><span class="nc">ExUnit.Case</span><span class="p">,</span><span class="w"> </span><span class="ss">async</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
+  </span><span class="kn">import</span><span class="w"> </span><span class="nc">Mox</span><span class="w">
+
+  </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w">
+
+  </span><span class="n">setup</span><span class="w"> </span><span class="ss">:verify_on_exit!</span><span class="w">
+
+  </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="0811571639-2">do</span><span class="w">
+    </span><span class="n">expect</span><span class="p" data-group-id="0811571639-3">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="0811571639-4">fn</span><span class="w"> </span><span class="bp">_</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p" data-group-id="0811571639-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p" data-group-id="0811571639-5">}</span><span class="w"> </span><span class="k" data-group-id="0811571639-4">end</span><span class="p" data-group-id="0811571639-3">)</span><span class="w">
+
+    </span><span class="ss">:ok</span><span class="w">
+  </span><span class="k" data-group-id="0811571639-2">end</span><span class="w">
+</span><span class="k" data-group-id="0811571639-1">end</span></code></pre>
+<p>
+This should be enough to make it pass! Basically that’s the whole trick - <code class="inline">setup</code> the “context” to satisfy the test example.</p>
+<p>
+Suppose we want to also show an example of error response:</p>
+<pre><code class="makeup elixir"><span class="c1"># humanized_weather.ex</span><span class="w">
+
+</span><span class="c1"># ...</span><span class="w">
+
+</span><span class="na">@doc</span><span class="w"> </span><span class="s">&quot;&quot;&quot;
+Displays current temperature at the given coordinates
+
+## Examples
+
+    iex&gt; HumanizedWeather.display_temp({50.06, 19.94})
+    &quot;Current temperature is 30 degrees&quot;
+
+    iex&gt; HumanizedWeather.display_temp({102.06, 19.94})
+    ** (RuntimeError) latitude must be in the range of -90 to 90 degrees
+&quot;&quot;&quot;</span><span class="w">
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">display_temp</span><span class="p" data-group-id="7110304503-1">(</span><span class="p" data-group-id="7110304503-2">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="7110304503-2">}</span><span class="p" data-group-id="7110304503-1">)</span><span class="w"> </span><span class="k" data-group-id="7110304503-3">do</span><span class="w">
+  </span><span class="k">case</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">temp</span><span class="p" data-group-id="7110304503-4">(</span><span class="p" data-group-id="7110304503-5">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="7110304503-5">}</span><span class="p" data-group-id="7110304503-4">)</span><span class="w"> </span><span class="k" data-group-id="7110304503-6">do</span><span class="w">
+    </span><span class="p" data-group-id="7110304503-7">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">temp</span><span class="p" data-group-id="7110304503-7">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">&quot;Current temperature is </span><span class="si" data-group-id="7110304503-8">#{</span><span class="n">temp</span><span class="si" data-group-id="7110304503-8">}</span><span class="s"> degrees&quot;</span><span class="w">
+    </span><span class="p" data-group-id="7110304503-9">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="n">reason</span><span class="p" data-group-id="7110304503-9">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="k">raise</span><span class="w"> </span><span class="n">reason</span><span class="w">
+  </span><span class="k" data-group-id="7110304503-6">end</span><span class="w">
+</span><span class="k" data-group-id="7110304503-3">end</span></code></pre>
+<p>
+With <code class="inline">Mox</code> that can be easily achieved with either checking the arguments in the body of the function or pattern matching the arguments.</p>
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="9722915895-1">do</span><span class="w">
+  </span><span class="kn">use</span><span class="w"> </span><span class="nc">ExUnit.Case</span><span class="p">,</span><span class="w"> </span><span class="ss">async</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
+  </span><span class="kn">import</span><span class="w"> </span><span class="nc">Mox</span><span class="w">
+  </span><span class="kn">alias</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w">
+
+  </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w">
+
+  </span><span class="n">setup</span><span class="w"> </span><span class="ss">:verify_on_exit!</span><span class="w">
+
+  </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="9722915895-2">do</span><span class="w">
+    </span><span class="n">expect</span><span class="p" data-group-id="9722915895-3">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="9722915895-4">fn</span><span class="w">
+      </span><span class="p" data-group-id="9722915895-5">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="9722915895-5">}</span><span class="w"> </span><span class="ow">when</span><span class="w"> </span><span class="n">lat</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="o">-</span><span class="mi">90</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">lat</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">90</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+        </span><span class="p" data-group-id="9722915895-6">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;latitude must be in the range of -90 to 90 degrees&quot;</span><span class="p" data-group-id="9722915895-6">}</span><span class="w">
+
+      </span><span class="p" data-group-id="9722915895-7">{</span><span class="c">_lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="9722915895-7">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+        </span><span class="p" data-group-id="9722915895-8">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p" data-group-id="9722915895-8">}</span><span class="w">
+    </span><span class="k" data-group-id="9722915895-4">end</span><span class="p" data-group-id="9722915895-3">)</span><span class="w">
+
+    </span><span class="ss">:ok</span><span class="w">
+  </span><span class="k" data-group-id="9722915895-2">end</span><span class="w">
+</span><span class="k" data-group-id="9722915895-1">end</span></code></pre>
+<p>
+<em>By the way, notice how aliased <code class="inline">MyApp.HumanizedWeather</code> in the test file allows us to use the alias in the doctest example.</em></p>
+<p>
+Let’s say we are satisfied with the test example and now we want to describe the other function <code class="inline">display_humidity/1</code></p>
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w"> </span><span class="k" data-group-id="8436179055-1">do</span><span class="w">
+
+  </span><span class="c1"># ...</span><span class="w">
+  </span><span class="c1"># ...</span><span class="w">
+
+  </span><span class="na">@doc</span><span class="w"> </span><span class="s">&quot;&quot;&quot;
+  Displays current humidity at the given coordinates
+
+  ## Examples
+
+      iex&gt; HumanizedWeather.display_humidity({50.06, 19.94})
+      &quot;Current humidity is 60%&quot;
+  &quot;&quot;&quot;</span><span class="w">
+  </span><span class="kd">def</span><span class="w"> </span><span class="nf">display_humidity</span><span class="p" data-group-id="8436179055-2">(</span><span class="p" data-group-id="8436179055-3">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="8436179055-3">}</span><span class="p" data-group-id="8436179055-2">)</span><span class="w"> </span><span class="k" data-group-id="8436179055-4">do</span><span class="w">
+    </span><span class="p" data-group-id="8436179055-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">humidity</span><span class="p" data-group-id="8436179055-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">humidity</span><span class="p" data-group-id="8436179055-6">(</span><span class="p" data-group-id="8436179055-7">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="8436179055-7">}</span><span class="p" data-group-id="8436179055-6">)</span><span class="w">
+    </span><span class="s">&quot;Current humidity is </span><span class="si" data-group-id="8436179055-8">#{</span><span class="n">humidity</span><span class="si" data-group-id="8436179055-8">}</span><span class="s">%&quot;</span><span class="w">
+  </span><span class="k" data-group-id="8436179055-4">end</span><span class="w">
+</span><span class="k" data-group-id="8436179055-1">end</span></code></pre>
+<p>
+If we add another expectation to the same setup as:</p>
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="2979026004-1">do</span><span class="w">
+  </span><span class="c1"># ...</span><span class="w">
+  </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w">
+
+  </span><span class="n">setup</span><span class="w"> </span><span class="ss">:verify_on_exit!</span><span class="w">
+
+  </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="2979026004-2">do</span><span class="w">
+    </span><span class="n">expect</span><span class="p" data-group-id="2979026004-3">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="2979026004-4">fn</span><span class="w">
+      </span><span class="c1"># ...</span><span class="w">
+    </span><span class="k" data-group-id="2979026004-4">end</span><span class="p" data-group-id="2979026004-3">)</span><span class="w">
+
+    </span><span class="n">expect</span><span class="p" data-group-id="2979026004-5">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:humidity</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="2979026004-6">fn</span><span class="w">
+      </span><span class="p" data-group-id="2979026004-7">{</span><span class="c">_lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="2979026004-7">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p" data-group-id="2979026004-8">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p" data-group-id="2979026004-8">}</span><span class="w">
+    </span><span class="k" data-group-id="2979026004-6">end</span><span class="p" data-group-id="2979026004-5">)</span><span class="w">
+
+    </span><span class="ss">:ok</span><span class="w">
+  </span><span class="k" data-group-id="2979026004-2">end</span><span class="w">
+</span><span class="k" data-group-id="2979026004-1">end</span></code></pre>
+<p>
+It will error while verifying mock for  <code class="inline">display_temp/1</code> with <code class="inline">* expected MyApp.MockWeatherAPI.temp/1 to be invoked once but it was invoked 0 times</code></p>
+<p>
+Indeed, we don’t expect <code class="inline">WeatherAPI.temp/1</code> to be called when checking humidity. So we need to separate the setup context for these functions. That could be done with the combination of <a href="https://hexdocs.pm/ex_unit/ExUnit.Case.html#describe/2"><code class="inline">describe/2</code></a> macro and one of the options <code class="inline">:only</code> or <code class="inline">:except</code> for <code class="inline">doctest</code>:</p>
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="5098614356-1">do</span><span class="w">
+  </span><span class="c1"># ...</span><span class="w">
+
+  </span><span class="n">setup</span><span class="w"> </span><span class="ss">:verify_on_exit!</span><span class="w">
+
+  </span><span class="n">describe</span><span class="w"> </span><span class="s">&quot;display_temp/1&quot;</span><span class="w"> </span><span class="k" data-group-id="5098614356-2">do</span><span class="w">
+    </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="p">,</span><span class="w"> </span><span class="ss">only</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5098614356-3">[</span><span class="ss">display_temp</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="5098614356-3">]</span><span class="w">
+
+    </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="5098614356-4">do</span><span class="w">
+      </span><span class="n">expect</span><span class="p" data-group-id="5098614356-5">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="5098614356-6">fn</span><span class="w">
+        </span><span class="c1"># ...</span><span class="w">
+      </span><span class="k" data-group-id="5098614356-6">end</span><span class="p" data-group-id="5098614356-5">)</span><span class="w">
+
+      </span><span class="ss">:ok</span><span class="w">
+    </span><span class="k" data-group-id="5098614356-4">end</span><span class="w">
+  </span><span class="k" data-group-id="5098614356-2">end</span><span class="w">
+
+  </span><span class="n">describe</span><span class="w"> </span><span class="s">&quot;display_humidity/1&quot;</span><span class="w"> </span><span class="k" data-group-id="5098614356-7">do</span><span class="w">
+    </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="p">,</span><span class="w"> </span><span class="ss">only</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5098614356-8">[</span><span class="ss">display_humidity</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="5098614356-8">]</span><span class="w">
+
+    </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="5098614356-9">do</span><span class="w">
+      </span><span class="n">expect</span><span class="p" data-group-id="5098614356-10">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:humidity</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="5098614356-11">fn</span><span class="w">
+        </span><span class="p" data-group-id="5098614356-12">{</span><span class="c">_lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="5098614356-12">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p" data-group-id="5098614356-13">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p" data-group-id="5098614356-13">}</span><span class="w">
+      </span><span class="k" data-group-id="5098614356-11">end</span><span class="p" data-group-id="5098614356-10">)</span><span class="w">
+
+      </span><span class="ss">:ok</span><span class="w">
+    </span><span class="k" data-group-id="5098614356-9">end</span><span class="w">
+  </span><span class="k" data-group-id="5098614356-7">end</span><span class="w">
+</span><span class="k" data-group-id="5098614356-1">end</span></code></pre>
+<p>
+Voilà! 🎉</p>
+<span id="conclusion">
+</span>
+<blockquote>
+  <h4 class="note">
+Note  </h4>
+  <p>
+There is a bug in Elixir v1.13.3 and older versions in <code class="inline">doctest</code> macro. <code class="inline">ExUnit</code> will just ignore it when no function from the list of given to the option <code class="inline">:only</code> is found. So if, say, later we rename the function but don’t update it in the test file - the test case will still pass (though the number of successful doctests will be smaller)  </p>
+  <p>
+In other words this will always pass.  </p>
+  <pre><code class="makeup elixir"><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="p">,</span><span class="w"> </span><span class="ss">only</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8756565554-1">[</span><span class="ss">not_existing_function</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p" data-group-id="8756565554-1">]</span></code></pre>
+  <p>
+Luckily <a href="https://github.com/elixir-lang/elixir/pull/11684/files">the fix</a> is already merged.  </p>
+</blockquote>
+<h3>
+Conclusion</h3>
+<p>
+To sum up, in order to “doctest” functions that have side effects we need to “setup” a context around testing examples and, if needed, isolate via <a href="https://hexdocs.pm/ex_unit/ExUnit.Case.html#describe/2"><code class="inline">describe</code></a> macro and specify the functions to run the <code class="inline">doctest</code> using options <code class="inline">:only</code> and/or <code class="inline">:except</code>.</p>
+</div>
+
+  <p class="text-gray-500 italic">
+    See a mistake, or would like to propose an improvement? Please, open a PR to edit the article on <a class="underline" href="https://github.com/RudolfMan/blog_posts/blob/master/2022/03-23-doctests-with-sidee-effects.md">Github</a>
+  </p>
+    </div>
+  </div>
+
+  <div class="text-base leading-7 font-semibold">
+    <p class="text-fuchsia-500 hover:text-fuchsia-600">
+      
+<a data-phx-link="redirect" data-phx-link-state="push" href="/blog">Back</a>
+  
+    </p>
+  </div>
+</div>
+</main>
+<footer class="py-10">
+  <div id="ok" class="relative mb-10 last:mb-0 px-6 pt-10 pb-8 bg-white col-start-2 col-end-6 ring-1 ring-gray-500/5 sm:rounded-lg sm:px-10">
+  <div class="text-base text-gray-600">
+    <h2 class="text-gray-900 text-3xl font-semibold">
+      
+    </h2>
+
+    <div class="mt-4 mb-2">
+      
+    <div class="flex">
+      <div class="mb-2">
+        <img src="/images/rudolf_manusachi-3bb82e361f9624566a0b775c25b45338.jpeg?vsn=d" class="rounded-full w-24 flex items-center justify-center">
+      </div>
+      <div class="flex flex-col">
+        <div class="px-6">
+          <h1 class="text-3xl">Rudolf Manusadzhian</h1>
+          <p class="italic">Developing software at
+            <a href="https://simplebet.io" class="text-fuchsia-600" target="_blank">Simplebet</a>
+          </p>
+        </div>
+        <div class="mt-3 flex place-content-around">
+          <div class="w-6">
+            <a href="https://github.com/RudolfMan" target="_blank">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Pro 6.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"></path></svg>
+            </a>
+          </div>
+
+          <div class="w-6">
+            <a href="https://twitter.com/RudManusachi" target="_blank">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Pro 6.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M400 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48zm-48.9 158.8c.2 2.8.2 5.7.2 8.5 0 86.7-66 186.6-186.6 186.6-37.2 0-71.7-10.8-100.7-29.4 5.3.6 10.4.8 15.8.8 30.7 0 58.9-10.4 81.4-28-28.8-.6-53-19.5-61.3-45.5 10.1 1.5 19.2 1.5 29.6-1.2-30-6.1-52.5-32.5-52.5-64.4v-.8c8.7 4.9 18.9 7.9 29.6 8.3a65.447 65.447 0 0 1-29.2-54.6c0-12.2 3.2-23.4 8.9-33.1 32.3 39.8 80.8 65.8 135.2 68.6-9.3-44.5 24-80.6 64-80.6 18.9 0 35.9 7.9 47.9 20.7 14.8-2.8 29-8.3 41.6-15.8-4.9 15.2-15.2 28-28.8 36.1 13.2-1.4 26-5.1 37.8-10.2-8.9 13.1-20.1 24.7-32.9 34z"></path></svg>
+            </a>
+          </div>
+
+          <div class="w-6">
+            <a href="https://www.linkedin.com/in/manusachi" target="_blank">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Pro 6.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"></path></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    </div>
+  </div>
+
+  <div class="text-base leading-7 font-semibold">
+    <p class="text-fuchsia-500 hover:text-fuchsia-600">
+      
+    </p>
+  </div>
+</div>
+</footer>
+      </div>
+    </div>
+  </body>
+</html>
