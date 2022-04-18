@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta content="QxE7Kw8hYCIkFhMfRiQVBSYTNTYOPTAN6XVhVtVGJCvTwLoadAfDTHfn" name="csrf-token">
+<meta content="MgU2OCs5GRAfdF1fIlMIJzZ2LnZxDDQUQTOuYc_cO2h1qjGPs8OCEdNp" name="csrf-token">
 <title>Doctest functions with side effects</title>
     <meta property="og:title" content="Doctest functions with side effects">
 
@@ -89,14 +89,14 @@ If you haven’t yet read <a href="https://dashbit.co/blog/mocks-and-explicit-co
 The documentation of <code class="inline">Mox</code> provides with an example of testing the module that displays the weather information.</p>
 <pre><code class="makeup elixir"><span class="c1"># humanized_weather.ex</span><span class="w">
 
-</span><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w"> </span><span class="k" data-group-id="9772863896-1">do</span><span class="w">
-  </span><span class="kd">def</span><span class="w"> </span><span class="nf">display_temp</span><span class="p" data-group-id="9772863896-2">(</span><span class="p" data-group-id="9772863896-3">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="9772863896-3">}</span><span class="p" data-group-id="9772863896-2">)</span><span class="w"> </span><span class="k" data-group-id="9772863896-4">do</span><span class="w">
-    </span><span class="p" data-group-id="9772863896-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">temp</span><span class="p" data-group-id="9772863896-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">temp</span><span class="p" data-group-id="9772863896-6">(</span><span class="p" data-group-id="9772863896-7">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="9772863896-7">}</span><span class="p" data-group-id="9772863896-6">)</span><span class="w">
-    </span><span class="s">&quot;Current temperature is </span><span class="si" data-group-id="9772863896-8">#{</span><span class="n">temp</span><span class="si" data-group-id="9772863896-8">}</span><span class="s"> degrees&quot;</span><span class="w">
-  </span><span class="k" data-group-id="9772863896-4">end</span><span class="w">
+</span><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w"> </span><span class="k" data-group-id="3749339439-1">do</span><span class="w">
+  </span><span class="kd">def</span><span class="w"> </span><span class="nf">display_temp</span><span class="p" data-group-id="3749339439-2">(</span><span class="p" data-group-id="3749339439-3">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="3749339439-3">}</span><span class="p" data-group-id="3749339439-2">)</span><span class="w"> </span><span class="k" data-group-id="3749339439-4">do</span><span class="w">
+    </span><span class="p" data-group-id="3749339439-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">temp</span><span class="p" data-group-id="3749339439-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">temp</span><span class="p" data-group-id="3749339439-6">(</span><span class="p" data-group-id="3749339439-7">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="3749339439-7">}</span><span class="p" data-group-id="3749339439-6">)</span><span class="w">
+    </span><span class="s">&quot;Current temperature is </span><span class="si" data-group-id="3749339439-8">#{</span><span class="n">temp</span><span class="si" data-group-id="3749339439-8">}</span><span class="s"> degrees&quot;</span><span class="w">
+  </span><span class="k" data-group-id="3749339439-4">end</span><span class="w">
 
   </span><span class="c1"># ...</span><span class="w">
-</span><span class="k" data-group-id="9772863896-1">end</span></code></pre>
+</span><span class="k" data-group-id="3749339439-1">end</span></code></pre>
 <p>
 Let’s add a <code class="inline">@doc</code> with a “doctestable” example:</p>
 <pre><code class="makeup elixir"><span class="c1"># humanized_weather.ex</span><span class="w">
@@ -111,22 +111,22 @@ Displays current temperature at the given coordinates
     iex&gt; MyApp.HumanizedWeather.display_temp({50.06, 19.94})
     &quot;Current temperature is 30 degrees&quot;
 &quot;&quot;&quot;</span><span class="w">
-</span><span class="kd">def</span><span class="w"> </span><span class="nf">display_temp</span><span class="p" data-group-id="8211054419-1">(</span><span class="p" data-group-id="8211054419-2">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="8211054419-2">}</span><span class="p" data-group-id="8211054419-1">)</span><span class="w"> </span><span class="k" data-group-id="8211054419-3">do</span><span class="w">
-  </span><span class="p" data-group-id="8211054419-4">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">temp</span><span class="p" data-group-id="8211054419-4">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">temp</span><span class="p" data-group-id="8211054419-5">(</span><span class="p" data-group-id="8211054419-6">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="8211054419-6">}</span><span class="p" data-group-id="8211054419-5">)</span><span class="w">
-  </span><span class="s">&quot;Current temperature is </span><span class="si" data-group-id="8211054419-7">#{</span><span class="n">temp</span><span class="si" data-group-id="8211054419-7">}</span><span class="s"> degrees&quot;</span><span class="w">
-</span><span class="k" data-group-id="8211054419-3">end</span></code></pre>
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">display_temp</span><span class="p" data-group-id="4779131619-1">(</span><span class="p" data-group-id="4779131619-2">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="4779131619-2">}</span><span class="p" data-group-id="4779131619-1">)</span><span class="w"> </span><span class="k" data-group-id="4779131619-3">do</span><span class="w">
+  </span><span class="p" data-group-id="4779131619-4">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">temp</span><span class="p" data-group-id="4779131619-4">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">temp</span><span class="p" data-group-id="4779131619-5">(</span><span class="p" data-group-id="4779131619-6">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="4779131619-6">}</span><span class="p" data-group-id="4779131619-5">)</span><span class="w">
+  </span><span class="s">&quot;Current temperature is </span><span class="si" data-group-id="4779131619-7">#{</span><span class="n">temp</span><span class="si" data-group-id="4779131619-7">}</span><span class="s"> degrees&quot;</span><span class="w">
+</span><span class="k" data-group-id="4779131619-3">end</span></code></pre>
 <p>
 Now let’s add the <code class="inline">doctest</code>:</p>
 <pre><code class="makeup elixir"><span class="c1"># humanized_weather_test.exs</span><span class="w">
 
-</span><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="3620291746-1">do</span><span class="w">
+</span><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="1140326798-1">do</span><span class="w">
   </span><span class="kn">use</span><span class="w"> </span><span class="nc">ExUnit.Case</span><span class="p">,</span><span class="w"> </span><span class="ss">async</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
 
   </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w">
-</span><span class="k" data-group-id="3620291746-1">end</span></code></pre>
+</span><span class="k" data-group-id="1140326798-1">end</span></code></pre>
 <p>
 Essentially <code class="inline">doctest</code> macro extracts examples from <code class="inline">@moduledoc</code> and <code class="inline">@doc</code> attributes into separate tests. What we want here is to “setup” some expectations for <code class="inline">MyApp.MockWeatherAPI</code>:</p>
-<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="4635405728-1">do</span><span class="w">
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="0351384572-1">do</span><span class="w">
   </span><span class="kn">use</span><span class="w"> </span><span class="nc">ExUnit.Case</span><span class="p">,</span><span class="w"> </span><span class="ss">async</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
   </span><span class="kn">import</span><span class="w"> </span><span class="nc">Mox</span><span class="w">
 
@@ -134,12 +134,12 @@ Essentially <code class="inline">doctest</code> macro extracts examples from <co
 
   </span><span class="n">setup</span><span class="w"> </span><span class="ss">:verify_on_exit!</span><span class="w">
 
-  </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="4635405728-2">do</span><span class="w">
-    </span><span class="n">expect</span><span class="p" data-group-id="4635405728-3">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="4635405728-4">fn</span><span class="w"> </span><span class="bp">_</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p" data-group-id="4635405728-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p" data-group-id="4635405728-5">}</span><span class="w"> </span><span class="k" data-group-id="4635405728-4">end</span><span class="p" data-group-id="4635405728-3">)</span><span class="w">
+  </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="0351384572-2">do</span><span class="w">
+    </span><span class="n">expect</span><span class="p" data-group-id="0351384572-3">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="0351384572-4">fn</span><span class="w"> </span><span class="bp">_</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p" data-group-id="0351384572-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p" data-group-id="0351384572-5">}</span><span class="w"> </span><span class="k" data-group-id="0351384572-4">end</span><span class="p" data-group-id="0351384572-3">)</span><span class="w">
 
     </span><span class="ss">:ok</span><span class="w">
-  </span><span class="k" data-group-id="4635405728-2">end</span><span class="w">
-</span><span class="k" data-group-id="4635405728-1">end</span></code></pre>
+  </span><span class="k" data-group-id="0351384572-2">end</span><span class="w">
+</span><span class="k" data-group-id="0351384572-1">end</span></code></pre>
 <p>
 This should be enough to make it pass! Basically that’s the whole trick - <code class="inline">setup</code> the “context” to satisfy the test example.</p>
 <p>
@@ -159,15 +159,15 @@ Displays current temperature at the given coordinates
     iex&gt; HumanizedWeather.display_temp({102.06, 19.94})
     ** (RuntimeError) latitude must be in the range of -90 to 90 degrees
 &quot;&quot;&quot;</span><span class="w">
-</span><span class="kd">def</span><span class="w"> </span><span class="nf">display_temp</span><span class="p" data-group-id="2933337408-1">(</span><span class="p" data-group-id="2933337408-2">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="2933337408-2">}</span><span class="p" data-group-id="2933337408-1">)</span><span class="w"> </span><span class="k" data-group-id="2933337408-3">do</span><span class="w">
-  </span><span class="k">case</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">temp</span><span class="p" data-group-id="2933337408-4">(</span><span class="p" data-group-id="2933337408-5">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="2933337408-5">}</span><span class="p" data-group-id="2933337408-4">)</span><span class="w"> </span><span class="k" data-group-id="2933337408-6">do</span><span class="w">
-    </span><span class="p" data-group-id="2933337408-7">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">temp</span><span class="p" data-group-id="2933337408-7">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">&quot;Current temperature is </span><span class="si" data-group-id="2933337408-8">#{</span><span class="n">temp</span><span class="si" data-group-id="2933337408-8">}</span><span class="s"> degrees&quot;</span><span class="w">
-    </span><span class="p" data-group-id="2933337408-9">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="n">reason</span><span class="p" data-group-id="2933337408-9">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="k">raise</span><span class="w"> </span><span class="n">reason</span><span class="w">
-  </span><span class="k" data-group-id="2933337408-6">end</span><span class="w">
-</span><span class="k" data-group-id="2933337408-3">end</span></code></pre>
+</span><span class="kd">def</span><span class="w"> </span><span class="nf">display_temp</span><span class="p" data-group-id="2319116058-1">(</span><span class="p" data-group-id="2319116058-2">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="2319116058-2">}</span><span class="p" data-group-id="2319116058-1">)</span><span class="w"> </span><span class="k" data-group-id="2319116058-3">do</span><span class="w">
+  </span><span class="k">case</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">temp</span><span class="p" data-group-id="2319116058-4">(</span><span class="p" data-group-id="2319116058-5">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="2319116058-5">}</span><span class="p" data-group-id="2319116058-4">)</span><span class="w"> </span><span class="k" data-group-id="2319116058-6">do</span><span class="w">
+    </span><span class="p" data-group-id="2319116058-7">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">temp</span><span class="p" data-group-id="2319116058-7">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">&quot;Current temperature is </span><span class="si" data-group-id="2319116058-8">#{</span><span class="n">temp</span><span class="si" data-group-id="2319116058-8">}</span><span class="s"> degrees&quot;</span><span class="w">
+    </span><span class="p" data-group-id="2319116058-9">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="n">reason</span><span class="p" data-group-id="2319116058-9">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="k">raise</span><span class="w"> </span><span class="n">reason</span><span class="w">
+  </span><span class="k" data-group-id="2319116058-6">end</span><span class="w">
+</span><span class="k" data-group-id="2319116058-3">end</span></code></pre>
 <p>
 With <code class="inline">Mox</code> that can be easily achieved with either checking the arguments in the body of the function or pattern matching the arguments.</p>
-<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="2401626097-1">do</span><span class="w">
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="0071114281-1">do</span><span class="w">
   </span><span class="kn">use</span><span class="w"> </span><span class="nc">ExUnit.Case</span><span class="p">,</span><span class="w"> </span><span class="ss">async</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
   </span><span class="kn">import</span><span class="w"> </span><span class="nc">Mox</span><span class="w">
   </span><span class="kn">alias</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w">
@@ -176,18 +176,18 @@ With <code class="inline">Mox</code> that can be easily achieved with either che
 
   </span><span class="n">setup</span><span class="w"> </span><span class="ss">:verify_on_exit!</span><span class="w">
 
-  </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="2401626097-2">do</span><span class="w">
-    </span><span class="n">expect</span><span class="p" data-group-id="2401626097-3">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="2401626097-4">fn</span><span class="w">
-      </span><span class="p" data-group-id="2401626097-5">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="2401626097-5">}</span><span class="w"> </span><span class="ow">when</span><span class="w"> </span><span class="n">lat</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="o">-</span><span class="mi">90</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">lat</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">90</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-        </span><span class="p" data-group-id="2401626097-6">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;latitude must be in the range of -90 to 90 degrees&quot;</span><span class="p" data-group-id="2401626097-6">}</span><span class="w">
+  </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="0071114281-2">do</span><span class="w">
+    </span><span class="n">expect</span><span class="p" data-group-id="0071114281-3">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="0071114281-4">fn</span><span class="w">
+      </span><span class="p" data-group-id="0071114281-5">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="0071114281-5">}</span><span class="w"> </span><span class="ow">when</span><span class="w"> </span><span class="n">lat</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="o">-</span><span class="mi">90</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">lat</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">90</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+        </span><span class="p" data-group-id="0071114281-6">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;latitude must be in the range of -90 to 90 degrees&quot;</span><span class="p" data-group-id="0071114281-6">}</span><span class="w">
 
-      </span><span class="p" data-group-id="2401626097-7">{</span><span class="c">_lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="2401626097-7">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-        </span><span class="p" data-group-id="2401626097-8">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p" data-group-id="2401626097-8">}</span><span class="w">
-    </span><span class="k" data-group-id="2401626097-4">end</span><span class="p" data-group-id="2401626097-3">)</span><span class="w">
+      </span><span class="p" data-group-id="0071114281-7">{</span><span class="c">_lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="0071114281-7">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+        </span><span class="p" data-group-id="0071114281-8">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p" data-group-id="0071114281-8">}</span><span class="w">
+    </span><span class="k" data-group-id="0071114281-4">end</span><span class="p" data-group-id="0071114281-3">)</span><span class="w">
 
     </span><span class="ss">:ok</span><span class="w">
-  </span><span class="k" data-group-id="2401626097-2">end</span><span class="w">
-</span><span class="k" data-group-id="2401626097-1">end</span></code></pre>
+  </span><span class="k" data-group-id="0071114281-2">end</span><span class="w">
+</span><span class="k" data-group-id="0071114281-1">end</span></code></pre>
 <blockquote>
   <p>
 <em>By the way, notice how <code class="inline">alias MyApp.HumanizedWeather</code> in the test file allows us to call <code class="inline">HumanizedWeather.display_temp/1</code> in the doctest example without common <code class="inline">MyApp</code> namespace.</em>  </p>
@@ -196,7 +196,7 @@ With <code class="inline">Mox</code> that can be easily achieved with either che
 Separate tests with isolated contexts</h3>
 <p>
 Let’s say we are satisfied with the test example and now we want to document the other function in the same module: <code class="inline">display_humidity/1</code></p>
-<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w"> </span><span class="k" data-group-id="9111396902-1">do</span><span class="w">
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w"> </span><span class="k" data-group-id="4286445173-1">do</span><span class="w">
 
   </span><span class="c1"># ...</span><span class="w">
   </span><span class="c1"># ...</span><span class="w">
@@ -209,60 +209,60 @@ Let’s say we are satisfied with the test example and now we want to document t
       iex&gt; HumanizedWeather.display_humidity({50.06, 19.94})
       &quot;Current humidity is 60%&quot;
   &quot;&quot;&quot;</span><span class="w">
-  </span><span class="kd">def</span><span class="w"> </span><span class="nf">display_humidity</span><span class="p" data-group-id="9111396902-2">(</span><span class="p" data-group-id="9111396902-3">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="9111396902-3">}</span><span class="p" data-group-id="9111396902-2">)</span><span class="w"> </span><span class="k" data-group-id="9111396902-4">do</span><span class="w">
-    </span><span class="p" data-group-id="9111396902-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">humidity</span><span class="p" data-group-id="9111396902-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">humidity</span><span class="p" data-group-id="9111396902-6">(</span><span class="p" data-group-id="9111396902-7">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="9111396902-7">}</span><span class="p" data-group-id="9111396902-6">)</span><span class="w">
-    </span><span class="s">&quot;Current humidity is </span><span class="si" data-group-id="9111396902-8">#{</span><span class="n">humidity</span><span class="si" data-group-id="9111396902-8">}</span><span class="s">%&quot;</span><span class="w">
-  </span><span class="k" data-group-id="9111396902-4">end</span><span class="w">
-</span><span class="k" data-group-id="9111396902-1">end</span></code></pre>
+  </span><span class="kd">def</span><span class="w"> </span><span class="nf">display_humidity</span><span class="p" data-group-id="4286445173-2">(</span><span class="p" data-group-id="4286445173-3">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="4286445173-3">}</span><span class="p" data-group-id="4286445173-2">)</span><span class="w"> </span><span class="k" data-group-id="4286445173-4">do</span><span class="w">
+    </span><span class="p" data-group-id="4286445173-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">humidity</span><span class="p" data-group-id="4286445173-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MyApp.WeatherAPI</span><span class="o">.</span><span class="n">humidity</span><span class="p" data-group-id="4286445173-6">(</span><span class="p" data-group-id="4286445173-7">{</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="n">long</span><span class="p" data-group-id="4286445173-7">}</span><span class="p" data-group-id="4286445173-6">)</span><span class="w">
+    </span><span class="s">&quot;Current humidity is </span><span class="si" data-group-id="4286445173-8">#{</span><span class="n">humidity</span><span class="si" data-group-id="4286445173-8">}</span><span class="s">%&quot;</span><span class="w">
+  </span><span class="k" data-group-id="4286445173-4">end</span><span class="w">
+</span><span class="k" data-group-id="4286445173-1">end</span></code></pre>
 <p>
 If we add another expectation to the same setup as:</p>
-<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="5579713806-1">do</span><span class="w">
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="7596271945-1">do</span><span class="w">
   </span><span class="c1"># ...</span><span class="w">
   </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="w">
 
   </span><span class="n">setup</span><span class="w"> </span><span class="ss">:verify_on_exit!</span><span class="w">
 
-  </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="5579713806-2">do</span><span class="w">
-    </span><span class="n">expect</span><span class="p" data-group-id="5579713806-3">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="5579713806-4">fn</span><span class="w">
+  </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="7596271945-2">do</span><span class="w">
+    </span><span class="n">expect</span><span class="p" data-group-id="7596271945-3">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="7596271945-4">fn</span><span class="w">
       </span><span class="c1"># ...</span><span class="w">
-    </span><span class="k" data-group-id="5579713806-4">end</span><span class="p" data-group-id="5579713806-3">)</span><span class="w">
+    </span><span class="k" data-group-id="7596271945-4">end</span><span class="p" data-group-id="7596271945-3">)</span><span class="w">
 
-    </span><span class="n">expect</span><span class="p" data-group-id="5579713806-5">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:humidity</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="5579713806-6">fn</span><span class="w"> </span><span class="p" data-group-id="5579713806-7">{</span><span class="c">_lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="5579713806-7">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p" data-group-id="5579713806-8">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p" data-group-id="5579713806-8">}</span><span class="w"> </span><span class="k" data-group-id="5579713806-6">end</span><span class="p" data-group-id="5579713806-5">)</span><span class="w">
+    </span><span class="n">expect</span><span class="p" data-group-id="7596271945-5">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:humidity</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="7596271945-6">fn</span><span class="w"> </span><span class="p" data-group-id="7596271945-7">{</span><span class="c">_lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="7596271945-7">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p" data-group-id="7596271945-8">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p" data-group-id="7596271945-8">}</span><span class="w"> </span><span class="k" data-group-id="7596271945-6">end</span><span class="p" data-group-id="7596271945-5">)</span><span class="w">
 
     </span><span class="ss">:ok</span><span class="w">
-  </span><span class="k" data-group-id="5579713806-2">end</span><span class="w">
-</span><span class="k" data-group-id="5579713806-1">end</span></code></pre>
+  </span><span class="k" data-group-id="7596271945-2">end</span><span class="w">
+</span><span class="k" data-group-id="7596271945-1">end</span></code></pre>
 <p>
 It will error while verifying mock for  <code class="inline">display_temp/1</code> with <code class="inline">* expected MyApp.MockWeatherAPI.temp/1 to be invoked once but it was invoked 0 times</code></p>
 <p>
 Indeed, we don’t expect <code class="inline">WeatherAPI.temp/1</code> to be called when checking humidity. So we need to separate the setup context for these functions. That could be done with the combination of <a href="https://hexdocs.pm/ex_unit/ExUnit.Case.html#describe/2"><code class="inline">describe/2</code></a> macro and one of the options <code class="inline">:only</code> or <code class="inline">:except</code> for <code class="inline">doctest</code>:</p>
-<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="4263629646-1">do</span><span class="w">
+<pre><code class="makeup elixir"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeatherTest</span><span class="w"> </span><span class="k" data-group-id="5566228362-1">do</span><span class="w">
   </span><span class="c1"># ...</span><span class="w">
 
   </span><span class="n">setup</span><span class="w"> </span><span class="ss">:verify_on_exit!</span><span class="w">
 
-  </span><span class="n">describe</span><span class="w"> </span><span class="s">&quot;display_temp/1&quot;</span><span class="w"> </span><span class="k" data-group-id="4263629646-2">do</span><span class="w">
-    </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="p">,</span><span class="w"> </span><span class="ss">only</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4263629646-3">[</span><span class="ss">display_temp</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="4263629646-3">]</span><span class="w">
+  </span><span class="n">describe</span><span class="w"> </span><span class="s">&quot;display_temp/1&quot;</span><span class="w"> </span><span class="k" data-group-id="5566228362-2">do</span><span class="w">
+    </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="p">,</span><span class="w"> </span><span class="ss">only</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5566228362-3">[</span><span class="ss">display_temp</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="5566228362-3">]</span><span class="w">
 
-    </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="4263629646-4">do</span><span class="w">
-      </span><span class="n">expect</span><span class="p" data-group-id="4263629646-5">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="4263629646-6">fn</span><span class="w">
+    </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="5566228362-4">do</span><span class="w">
+      </span><span class="n">expect</span><span class="p" data-group-id="5566228362-5">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:temp</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="5566228362-6">fn</span><span class="w">
         </span><span class="c1"># ...</span><span class="w">
-      </span><span class="k" data-group-id="4263629646-6">end</span><span class="p" data-group-id="4263629646-5">)</span><span class="w">
+      </span><span class="k" data-group-id="5566228362-6">end</span><span class="p" data-group-id="5566228362-5">)</span><span class="w">
 
       </span><span class="ss">:ok</span><span class="w">
-    </span><span class="k" data-group-id="4263629646-4">end</span><span class="w">
-  </span><span class="k" data-group-id="4263629646-2">end</span><span class="w">
+    </span><span class="k" data-group-id="5566228362-4">end</span><span class="w">
+  </span><span class="k" data-group-id="5566228362-2">end</span><span class="w">
 
-  </span><span class="n">describe</span><span class="w"> </span><span class="s">&quot;display_humidity/1&quot;</span><span class="w"> </span><span class="k" data-group-id="4263629646-7">do</span><span class="w">
-    </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="p">,</span><span class="w"> </span><span class="ss">only</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4263629646-8">[</span><span class="ss">display_humidity</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="4263629646-8">]</span><span class="w">
+  </span><span class="n">describe</span><span class="w"> </span><span class="s">&quot;display_humidity/1&quot;</span><span class="w"> </span><span class="k" data-group-id="5566228362-7">do</span><span class="w">
+    </span><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="p">,</span><span class="w"> </span><span class="ss">only</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5566228362-8">[</span><span class="ss">display_humidity</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="5566228362-8">]</span><span class="w">
 
-    </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="4263629646-9">do</span><span class="w">
-      </span><span class="n">expect</span><span class="p" data-group-id="4263629646-10">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:humidity</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="4263629646-11">fn</span><span class="w"> </span><span class="p" data-group-id="4263629646-12">{</span><span class="c">_lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="4263629646-12">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p" data-group-id="4263629646-13">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p" data-group-id="4263629646-13">}</span><span class="w"> </span><span class="k" data-group-id="4263629646-11">end</span><span class="p" data-group-id="4263629646-10">)</span><span class="w">
+    </span><span class="n">setup</span><span class="w"> </span><span class="k" data-group-id="5566228362-9">do</span><span class="w">
+      </span><span class="n">expect</span><span class="p" data-group-id="5566228362-10">(</span><span class="nc">MyApp.MockWeatherAPI</span><span class="p">,</span><span class="w"> </span><span class="ss">:humidity</span><span class="p">,</span><span class="w"> </span><span class="k" data-group-id="5566228362-11">fn</span><span class="w"> </span><span class="p" data-group-id="5566228362-12">{</span><span class="c">_lat</span><span class="p">,</span><span class="w"> </span><span class="c">_long</span><span class="p" data-group-id="5566228362-12">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p" data-group-id="5566228362-13">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p" data-group-id="5566228362-13">}</span><span class="w"> </span><span class="k" data-group-id="5566228362-11">end</span><span class="p" data-group-id="5566228362-10">)</span><span class="w">
 
       </span><span class="ss">:ok</span><span class="w">
-    </span><span class="k" data-group-id="4263629646-9">end</span><span class="w">
-  </span><span class="k" data-group-id="4263629646-7">end</span><span class="w">
-</span><span class="k" data-group-id="4263629646-1">end</span></code></pre>
+    </span><span class="k" data-group-id="5566228362-9">end</span><span class="w">
+  </span><span class="k" data-group-id="5566228362-7">end</span><span class="w">
+</span><span class="k" data-group-id="5566228362-1">end</span></code></pre>
 <p>
 Voilà! 🎉</p>
 <span id="conclusion">
@@ -276,7 +276,7 @@ Note  </h4>
 There is a bug in Elixir v1.13.3 and older versions in <code class="inline">doctest</code> macro. <code class="inline">ExUnit</code> will just ignore it when no function from the list of given to the option <code class="inline">:only</code> is found. So if, say, later we rename the function but don’t update it in the test file - the test case will still pass (though the number of successful doctests will be smaller)  </p>
   <p>
 In other words this will always pass.  </p>
-  <pre><code class="makeup elixir"><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="p">,</span><span class="w"> </span><span class="ss">only</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2776890481-1">[</span><span class="ss">not_existing_function</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p" data-group-id="2776890481-1">]</span></code></pre>
+  <pre><code class="makeup elixir"><span class="n">doctest</span><span class="w"> </span><span class="nc">MyApp.HumanizedWeather</span><span class="p">,</span><span class="w"> </span><span class="ss">only</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7656655991-1">[</span><span class="ss">not_existing_function</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p" data-group-id="7656655991-1">]</span></code></pre>
   <p>
 Luckily <a href="https://github.com/elixir-lang/elixir/pull/11684/files">the fix</a> is already merged.  </p>
 </blockquote>
